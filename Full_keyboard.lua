@@ -2,22 +2,21 @@ local VIM = game:GetService("VirtualInputManager")
 local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 
--- Keep Mobile Buttons Visible (TouchGui Fix)
+-- TouchGui Fix (Keep Mobile Controls)
 task.spawn(function()
     while task.wait(1) do
         pcall(function()
             local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
             local touchGui = playerGui:FindFirstChild("TouchGui")
-            if touchGui then
+            if touchGui and touchGui.Enabled == false then
                 touchGui.Enabled = true
             end
         end)
     end
 end)
 
--- Main UI Setup
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "CustomPCKeyboard"
+ScreenGui.Name = "FinalUltimateKeyboard"
 ScreenGui.Parent = game.CoreGui
 ScreenGui.ResetOnSpawn = false
 
@@ -36,11 +35,10 @@ Layout.CellSize = UDim2.new(0, 42, 0, 36)
 Layout.CellPadding = UDim2.new(0, 4, 0, 4)
 Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
--- State Control
 local pickingMode = false
 local allLocked = false
 
--- Top Control Bar
+-- Control Bar
 local TopBar = Instance.new("Frame")
 TopBar.Size = UDim2.new(1, 0, 0, 45)
 TopBar.Position = UDim2.new(0, 0, 0, -50)
@@ -62,7 +60,6 @@ local function createControlBtn(text, pos, color, callback)
     return btn
 end
 
--- External Key Spawner
 local function spawnExternalKey(keyName)
     local cBtn = Instance.new("TextButton")
     cBtn.Name = "CustomKey"
@@ -78,24 +75,23 @@ local function spawnExternalKey(keyName)
     Instance.new("UICorner", cBtn).CornerRadius = UDim.new(0, 12)
 
     cBtn.MouseButton1Down:Connect(function()
-        local code = Enum.KeyCode[keyName] or Enum.KeyCode.Space
+        local code = Enum.KeyCode[keyName] or (keyName == "Space" and Enum.KeyCode.Space or Enum.KeyCode.A)
         VIM:SendKeyEvent(true, code, false, game)
         cBtn.BackgroundColor3 = Color3.new(0.7, 0, 0)
     end)
     cBtn.MouseButton1Up:Connect(function()
-        local code = Enum.KeyCode[keyName] or Enum.KeyCode.Space
+        local code = Enum.KeyCode[keyName] or (keyName == "Space" and Enum.KeyCode.Space or Enum.KeyCode.A)
         VIM:SendKeyEvent(false, code, false, game)
         cBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     end)
     cBtn.TouchLongPress:Connect(function() cBtn:Destroy() end)
 end
 
--- Top Bar Buttons
 local pickBtn = createControlBtn("Choose Key", UDim2.new(0, 5, 0, 5), Color3.fromRGB(150, 130, 0), function()
     pickingMode = not pickingMode
 end)
 
-createControlBtn("Lock UI & Keys", UDim2.new(0, 150, 0, 5), Color3.fromRGB(0, 100, 150), function()
+createControlBtn("Lock Everything", UDim2.new(0, 150, 0, 5), Color3.fromRGB(0, 100, 150), function()
     allLocked = not allLocked
     MainFrame.Draggable = not allLocked
     for _, v in pairs(ScreenGui:GetChildren()) do
@@ -107,7 +103,7 @@ createControlBtn("Destroy GUI", UDim2.new(0, 295, 0, 5), Color3.fromRGB(150, 0, 
     ScreenGui:Destroy()
 end)
 
--- Keyboard Layout Arrays
+-- FULL KEYBOARD LAYOUT (F-Keys, Numbers, Letters)
 local keys = {
     "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12",
     "One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Zero",
@@ -122,7 +118,6 @@ local displayNames = {
     LeftShift="Shift", LeftControl="Ctrl", Return="Enter", Backspace="Del", Space="SPACE"
 }
 
--- Key Creation Logic
 for _, k in ipairs(keys) do
     local b = Instance.new("TextButton")
     b.Text = displayNames[k] or k
@@ -151,10 +146,9 @@ for _, k in ipairs(keys) do
     end)
 end
 
--- UI State Manager (Color/Text Change)
 game:GetService("RunService").RenderStepped:Connect(function()
     if pickingMode then
-        pickBtn.Text = "SELECT KEY..."
+        pickBtn.Text = "SELECT A KEY..."
         pickBtn.BackgroundColor3 = Color3.new(1, 0, 0)
     else
         pickBtn.Text = "Choose Key"
