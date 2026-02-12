@@ -10,7 +10,6 @@ task.spawn(function()
             local touchGui = playerGui:FindFirstChild("TouchGui")
             if touchGui then
                 touchGui.Enabled = true
-                -- منع اختفاء الأزرار عند الضغط على الكيبورد
                 local touchFrame = touchGui:FindFirstChild("TouchControlFrame")
                 if touchFrame then touchFrame.Visible = true end
             end
@@ -19,23 +18,22 @@ task.spawn(function()
 end)
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "FinalMobileKeyboard_V6"
+ScreenGui.Name = "FinalMobileKeyboard_Clean"
 ScreenGui.Parent = game.CoreGui
 ScreenGui.ResetOnSpawn = false
--- هذه الخاصية تسمح بالضغط خلف الـ GUI في الأماكن الفارغة
 ScreenGui.IgnoreGuiInset = true
 
 local pickingMode = false
 local guiLocked = false
 local keysLocked = false
 
--- [2] MAIN HOLDER (Background transparency is key here)
+-- [2] MAIN HOLDER
 local Holder = Instance.new("Frame")
 Holder.Size = UDim2.new(0, 650, 0, 320)
 Holder.Position = UDim2.new(0.5, -325, 0.5, -160)
 Holder.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-Holder.BackgroundTransparency = 0.2 -- شفافية بسيطة لرؤية اللعبة خلفه
-Holder.Active = false -- نجعله false ليمر اللمس من خلاله
+Holder.BackgroundTransparency = 0.2
+Holder.Active = false 
 Holder.Draggable = true
 Holder.Parent = ScreenGui
 Instance.new("UICorner", Holder)
@@ -44,7 +42,7 @@ Instance.new("UICorner", Holder)
 local TopBar = Instance.new("Frame")
 TopBar.Size = UDim2.new(1, 0, 0, 45)
 TopBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-TopBar.Active = true -- الشريط العلوي فقط هو الذي يمسك اللمس للتحريك
+TopBar.Active = true 
 TopBar.Parent = Holder
 Instance.new("UICorner", TopBar)
 
@@ -93,5 +91,80 @@ local function createRow()
     return row
 end
 
-local function spawnExternalKey(
+local function spawnExternalKey(name)
+    local k = Instance.new("TextButton")
+    k.Name = "CustomKey"
+    k.Size = UDim2.new(0, 60, 0, 60)
+    k.Position = UDim2.new(0.5, 0, 0.3, 0)
+    k.Text = name
+    k.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    k.BackgroundTransparency = 0.3
+    k.TextColor3 = Color3.new(1, 1, 1)
+    k.Draggable = not keysLocked
+    k.Active = true
+    k.Parent = ScreenGui
+    Instance.new("UICorner", k)
+    
+    k.MouseButton1Down:Connect(function()
+        VIM:SendKeyEvent(true, Enum.KeyCode[name] or Enum.KeyCode.Space, false, game)
+        k.BackgroundColor3 = Color3.new(1, 0, 0)
+    end)
+    k.MouseButton1Up:Connect(function()
+        VIM:SendKeyEvent(false, Enum.KeyCode[name] or Enum.KeyCode.Space, false, game)
+        k.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    end)
+    k.TouchLongPress:Connect(function() k:Destroy() end)
+end
 
+local function makeKey(name, row, width, displayName)
+    local k = Instance.new("TextButton")
+    k.Size = UDim2.new(0, width or 46, 1, 0)
+    k.Text = displayName or name
+    k.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    k.TextColor3 = Color3.new(1, 1, 1)
+    k.Font = Enum.Font.SourceSansBold
+    k.Parent = row
+    Instance.new("UICorner", k)
+
+    k.MouseButton1Down:Connect(function()
+        if pickingMode then spawnExternalKey(name) pickingMode = false
+        else
+            VIM:SendKeyEvent(true, Enum.KeyCode[name] or Enum.KeyCode.Space, false, game)
+            k.BackgroundColor3 = Color3.new(0.8, 0, 0)
+        end
+    end)
+    k.MouseButton1Up:Connect(function()
+        VIM:SendKeyEvent(false, Enum.KeyCode[name] or Enum.KeyCode.Space, false, game)
+        k.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    end)
+end
+
+-- BUILD LAYOUT
+local RowLayout = Instance.new("UIListLayout")
+RowLayout.Parent = Container
+RowLayout.Padding = UDim.new(0, 4)
+
+local r1=createRow() for i=1,12 do makeKey("F"..i, r1, 42) end
+local r2=createRow() local nums={"One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Zero"} local nD={"1","2","3","4","5","6","7","8","9","0"} for i,v in ipairs(nums) do makeKey(v, r2, 44, nD[i]) end makeKey("Backspace", r2, 55, "Del")
+local r3=createRow() for _,v in ipairs({"Q","W","E","R","T","Y","U","I","O","P"}) do makeKey(v, r3) end
+local r4=createRow() for _,v in ipairs({"A","S","D","F","G","H","J","K","L"}) do makeKey(v, r4) end makeKey("Return", r4, 70, "Enter")
+local r5=createRow() makeKey("LeftShift", r5, 70, "Shift") for _,v in ipairs({"Z","X","C","V","B","N","M"}) do makeKey(v, r5) end
+local r6=createRow() makeKey("LeftControl", r6, 60, "Ctrl") makeKey("Tab", r6, 60) makeKey("Space", r6, 250, "SPACE")
+
+-- [5] LIVE UPDATES
+RunService.RenderStepped:Connect(function()
+    pickBtn.Text = pickingMode and "SELECT..." or "Choose Key"
+    lockGuiBtn.Text = guiLocked and "Lock GUI: ON" or "Lock GUI: OFF"
+    lockKeysBtn.Text = keysLocked and "Lock Keys: ON" or "Lock Keys: OFF"
+end)
+
+local ShowBtn = Instance.new("TextButton")
+ShowBtn.Size = UDim2.new(0, 80, 0, 35)
+ShowBtn.Position = UDim2.new(0, 15, 0, 15)
+ShowBtn.Text = "SHOW UI"
+ShowBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 0)
+ShowBtn.TextColor3 = Color3.new(1, 1, 1)
+ShowBtn.Parent = ScreenGui
+ShowBtn.Visible = false
+ShowBtn.MouseButton1Click:Connect(function() Holder.Visible = true ShowBtn.Visible = false end)
+Holder:GetPropertyChangedSignal("Visible"):Connect(function() ShowBtn.Visible = not Holder.Visible end)
